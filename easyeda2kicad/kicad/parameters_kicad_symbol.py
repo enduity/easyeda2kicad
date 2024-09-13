@@ -593,8 +593,7 @@ class KiSymbolBezier:
 
 # ---------------- SYMBOL ----------------
 @dataclass
-class KiSymbol:
-    info: KiSymbolInfo
+class KiSymbolUnit:
     pins: List[KiSymbolPin] = field(default_factory=lambda: [])
     rectangles: List[KiSymbolRectangle] = field(default_factory=lambda: [])
     circles: List[KiSymbolCircle] = field(default_factory=lambda: [])
@@ -602,30 +601,84 @@ class KiSymbol:
     polygons: List[KiSymbolPolygon] = field(default_factory=lambda: [])
     beziers: List[KiSymbolBezier] = field(default_factory=lambda: [])
 
-    def export_handler(self, kicad_version: str):
-        # Get y_min and y_max to put component info
-        self.info.y_low = min(pin.pos_y for pin in self.pins) if self.pins else 0
-        self.info.y_high = max(pin.pos_y for pin in self.pins) if self.pins else 0
+    def get_min_y(self):
+        return min(pin.pos_y for pin in self.pins) if self.pins else float("+inf")
 
-        sym_export_data = {}
+    def get_max_y(self):
+        return max(pin.pos_y for pin in self.pins) if self.pins else float("-inf")
+
+    def export_handler(self, kicad_version: str):
+        unit_export_data = {}
         for _field in fields(self):
             shapes = getattr(self, _field.name)
             if isinstance(shapes, list):
-                sym_export_data.setdefault(_field.name, [])
+                unit_export_data.setdefault(_field.name, [])
                 for sub_symbol in shapes:
-                    sym_export_data[_field.name].append(
+                    unit_export_data[_field.name].append(
                         getattr(sub_symbol, f"export_v{kicad_version}")()
                     )
             else:
-                sym_export_data[_field.name] = getattr(
+                unit_export_data[_field.name] = getattr(
                     shapes, f"export_v{kicad_version}"
                 )()
+        return unit_export_data
+
+    def export_v6(self, unit_library_id):
+        unit_export_data = self.export_handler(kicad_version="6")
+        unit_pins = unit_export_data.pop("pins")
+        unit_graphic_items = itertools.chain.from_iterable(unit_export_data.values())
+
+        return textwrap.indent(
+            textwrap.dedent(
+                """
+              (symbol "{library_id}"
+                {graphic_items}
+                {pins}
+              )"""
+                ),
+            "  " * 2,
+        ).format(
+            library_id=unit_library_id,
+            graphic_items=textwrap.indent(
+                textwrap.dedent("".join(unit_graphic_items)), "  " * 3
+            ),
+            pins=textwrap.indent(textwrap.dedent("".join(unit_pins)), "  " * 3),
+        )
+
+@dataclass
+class KiSymbol:
+    info: KiSymbolInfo
+    units: List[KiSymbolUnit] = field(default_factory=lambda: [])
+
+    def export_handler(self, kicad_version: str):
+        # Get y_min and y_max to put component info
+        self.info.y_low = min(unit.get_min_y() for unit in self.units)
+        if self.info.y_low == float("+inf"):
+            self.info.y_low = 0
+        self.info.y_high = max(unit.get_max_y() for unit in self.units)
+        if self.info.y_high == float("-inf"):
+            self.info.y_high = 0
+
+        sym_export_data = {}
+        if isinstance(self.info, list):
+            sym_export_data.setdefault("info", [])
+            for sub_symbol in self.info:
+                sym_export_data["info"].append(
+                    getattr(sub_symbol, f"export_v{kicad_version}")()
+                )
+        else:
+            sym_export_data["info"] = getattr(
+                self.info, f"export_v{kicad_version}"
+            )()
+
         return sym_export_data
 
     def export_v5(self):
         sym_export_data = self.export_handler(kicad_version="5")
         sym_info = sym_export_data.pop("info")
-        sym_graphic_items = itertools.chain.from_iterable(sym_export_data.values())
+        if len(self.units) > 1:
+            print("multiple units not supported for v5, only the first will be exported")
+        sym_graphic_items = itertools.chain.from_iterable(self.units[0].export_handler(kicad_version="5").values())
 
         return (
             "#\n#"
@@ -635,8 +688,14 @@ class KiSymbol:
     def export_v6(self):
         sym_export_data = self.export_handler(kicad_version="6")
         sym_info = sym_export_data.pop("info")
-        sym_pins = sym_export_data.pop("pins")
-        sym_graphic_items = itertools.chain.from_iterable(sym_export_data.values())
+
+        unitstrings = []
+        unitnumber = 1 if len(self.units) > 1 else 0
+        for unit in self.units:
+            unitstrings.append(
+                unit.export_v6(f"{sanitize_fields(self.info.name)}_{unitnumber}_1")
+            )
+            unitnumber += 1
 
         return textwrap.indent(
             textwrap.dedent(
@@ -645,10 +704,7 @@ class KiSymbol:
               (in_bom yes)
               (on_board yes)
               {symbol_properties}
-              (symbol "{library_id}_0_1"
-                {graphic_items}
-                {pins}
-              )
+              {units}
             )"""
             ),
             "  ",
@@ -657,10 +713,7 @@ class KiSymbol:
             symbol_properties=textwrap.indent(
                 textwrap.dedent("".join(sym_info)), "  " * 2
             ),
-            graphic_items=textwrap.indent(
-                textwrap.dedent("".join(sym_graphic_items)), "  " * 3
-            ),
-            pins=textwrap.indent(textwrap.dedent("".join(sym_pins)), "  " * 3),
+            units="".join(unitstrings),
         )
 
     def export(self, kicad_version: KicadVersion) -> str:

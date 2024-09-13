@@ -314,42 +314,46 @@ def convert_to_kicad(ee_symbol: EeSymbol, kicad_version: KicadVersion) -> KiSymb
 
     kicad_symbol = KiSymbol(
         info=ki_info,
-        pins=convert_ee_pins(
-            ee_pins=ee_symbol.pins, ee_bbox=ee_symbol.bbox, kicad_version=kicad_version
-        ),
-        rectangles=convert_ee_rectangles(
-            ee_rectangles=ee_symbol.rectangles,
-            ee_bbox=ee_symbol.bbox,
-            kicad_version=kicad_version,
-        ),
-        circles=convert_ee_circles(
-            ee_circles=ee_symbol.circles,
-            ee_bbox=ee_symbol.bbox,
-            kicad_version=kicad_version,
-        ),
-        arcs=convert_ee_arcs(
-            ee_arcs=ee_symbol.arcs, ee_bbox=ee_symbol.bbox, kicad_version=kicad_version
-        ),
-    )
-    kicad_symbol.circles += convert_ee_ellipses(
-        ee_ellipses=ee_symbol.ellipses,
-        ee_bbox=ee_symbol.bbox,
-        kicad_version=kicad_version,
     )
 
-    kicad_symbol.polygons, kicad_symbol.beziers = convert_ee_paths(
-        ee_paths=ee_symbol.paths, ee_bbox=ee_symbol.bbox, kicad_version=kicad_version
-    )
-    kicad_symbol.polygons += convert_ee_polylines(
-        ee_polylines=ee_symbol.polylines,
-        ee_bbox=ee_symbol.bbox,
-        kicad_version=kicad_version,
-    )
-    kicad_symbol.polygons += convert_ee_polygons(
-        ee_polygons=ee_symbol.polygons,
-        ee_bbox=ee_symbol.bbox,
-        kicad_version=kicad_version,
-    )
+    for ee_unit in ee_symbol.units:
+        kicad_unit = KiSymbolUnit(
+            pins=convert_ee_pins(
+                ee_pins=ee_unit.pins, ee_bbox=ee_unit.bbox, kicad_version=kicad_version
+            ),
+            rectangles=convert_ee_rectangles(
+                ee_rectangles=ee_unit.rectangles,
+                ee_bbox=ee_unit.bbox,
+                kicad_version=kicad_version,
+            ),
+            circles=convert_ee_circles(
+                ee_circles=ee_unit.circles,
+                ee_bbox=ee_unit.bbox,
+                kicad_version=kicad_version,
+            ),
+            arcs=convert_ee_arcs(
+                ee_arcs=ee_unit.arcs, ee_bbox=ee_unit.bbox, kicad_version=kicad_version
+            ),
+        )
+        kicad_unit.circles += convert_ee_ellipses(
+            ee_ellipses=ee_unit.ellipses,
+            ee_bbox=ee_unit.bbox,
+            kicad_version=kicad_version,
+        )
+        kicad_unit.polygons, kicad_unit.beziers = convert_ee_paths(
+            ee_paths=ee_unit.paths, ee_bbox=ee_unit.bbox, kicad_version=kicad_version
+        )
+        kicad_unit.polygons += convert_ee_polylines(
+            ee_polylines=ee_unit.polylines,
+            ee_bbox=ee_unit.bbox,
+            kicad_version=kicad_version,
+        )
+        kicad_unit.polygons += convert_ee_polygons(
+            ee_polygons=ee_unit.polygons,
+            ee_bbox=ee_unit.bbox,
+            kicad_version=kicad_version,
+        )
+        kicad_symbol.units.append(kicad_unit)
 
     return kicad_symbol
 
