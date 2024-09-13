@@ -110,6 +110,18 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def windows_documents_path():
+    import ctypes.wintypes
+
+    csidl_personal = 5       # My Documents
+    shgfp_type_current = 0   # Get current, not default value
+
+    buffer = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+    ctypes.windll.shell32.SHGetFolderPathW(None, csidl_personal, None, shgfp_type_current, buffer)
+
+    return buffer.value
+
+
 def valid_arguments(arguments: dict) -> bool:
 
     if not arguments["lcsc_id"].startswith("C"):
@@ -154,9 +166,12 @@ def valid_arguments(arguments: dict) -> bool:
             logging.error(f"Can't find the folder : {base_folder}")
             return False
     else:
+        documents_dir = os.path.expanduser("~") + "/Documents"
+        if os.name == "nt":
+            documents_dir = windows_documents_path()
+
         default_folder = os.path.join(
-            os.path.expanduser("~"),
-            "Documents",
+            documents_dir,
             "Kicad",
             "easyeda2kicad",
         )
