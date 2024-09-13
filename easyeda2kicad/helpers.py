@@ -98,22 +98,18 @@ def add_component_in_symbol_lib_file(
         with open(file=lib_path, mode="a+", encoding="utf-8") as lib_file:
             lib_file.write(component_content)
     elif kicad_version == KicadVersion.v6:
-        with open(file=lib_path, mode="rb+") as lib_file:
-            lib_file.seek(-2, 2)
-            lib_file.truncate()
-            lib_file.write(component_content.encode(encoding="utf-8"))
-            lib_file.write("\n)".encode(encoding="utf-8"))
-
         with open(file=lib_path, encoding="utf-8") as lib_file:
-            new_lib_data = lib_file.read()
+            content = lib_file.read()
+
+        # Perform both replacements in one operation
+        updated_content = re.sub(r'^\)[\r\n]*', component_content + "\n)", content, flags=re.MULTILINE)
+        updated_content = updated_content.replace(
+            "(generator kicad_symbol_editor)",
+            "(generator https://github.com/uPesy/easyeda2kicad.py)"
+        )
 
         with open(file=lib_path, mode="w", encoding="utf-8") as lib_file:
-            lib_file.write(
-                new_lib_data.replace(
-                    "(generator kicad_symbol_editor)",
-                    "(generator https://github.com/uPesy/easyeda2kicad.py)",
-                )
-            )
+            lib_file.write(updated_content)
 
 
 def get_local_config() -> dict:
