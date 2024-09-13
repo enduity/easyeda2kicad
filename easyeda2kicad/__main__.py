@@ -25,7 +25,10 @@ from easyeda2kicad.helpers import (
 from easyeda2kicad.kicad.export_kicad_3d_model import Exporter3dModelKicad
 from easyeda2kicad.kicad.export_kicad_footprint import ExporterFootprintKicad
 from easyeda2kicad.kicad.export_kicad_symbol import ExporterSymbolKicad
-from easyeda2kicad.kicad.parameters_kicad_symbol import KicadVersion
+from easyeda2kicad.kicad.parameters_kicad_symbol import (
+    KicadVersion,
+    sanitize_fields,
+)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -262,7 +265,7 @@ def main(argv: List[str] = sys.argv[1:]) -> int:
 
         is_id_already_in_symbol_lib = id_already_in_symbol_lib(
             lib_path=f"{arguments['output']}.{sym_lib_ext}",
-            component_name=easyeda_symbol.info.name,
+            component_name=sanitize_fields(easyeda_symbol.info.name),
             kicad_version=kicad_version,
         )
 
@@ -281,7 +284,7 @@ def main(argv: List[str] = sys.argv[1:]) -> int:
         if is_id_already_in_symbol_lib:
             update_component_in_symbol_lib_file(
                 lib_path=f"{arguments['output']}.{sym_lib_ext}",
-                component_name=easyeda_symbol.info.name,
+                component_name=sanitize_fields(easyeda_symbol.info.name),
                 component_content=kicad_symbol_lib,
                 kicad_version=kicad_version,
             )

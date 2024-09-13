@@ -97,7 +97,7 @@ ki_box_fill_v5_format = {
 
 
 def sanitize_fields(name: str) -> str:
-    return name.replace(" ", "").replace("/", "_")
+    return name.replace(" ", "").replace("/", "_").replace(":", "{colon}")
 
 
 def apply_text_style(text: str, kicad_version: KicadVersion) -> str:
