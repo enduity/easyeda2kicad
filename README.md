@@ -27,6 +27,10 @@ A Python script that converts any electronic components from [EasyEDA](https://e
 
 ## 💾 Installation
 
+You can install and run easyeda2kicad in two ways:
+
+### Using Python
+
 Before proceeding, ensure that Python 3 and pip are installed on your system.
 
 ```bash
@@ -34,6 +38,27 @@ git clone https://github.com/enduity/easyeda2kicad
 cd easyeda2kicad
 pip install .
 ```
+
+### Using Docker
+
+1. Build the Docker image:
+```bash
+docker build -t easyeda2kicad .
+```
+
+2. Run the converter using Docker:
+```bash
+# Basic usage (symbol)
+docker run -v $(pwd):/data easyeda2kicad --symbol --lcsc_id=C2040 --output /data/rp2040
+
+# Full conversion (symbol + footprint + 3D model)
+docker run -v $(pwd):/data easyeda2kicad --full --lcsc_id=C2040 --output /data/rp2040
+
+# Save to a specific output directory
+docker run -v /path/to/your/libs:/data/output easyeda2kicad --full --lcsc_id=C2040 --output /data/output/my_lib
+```
+
+Mount a volume using `-v` to share files between your host system and the container. The path before `:` is your local directory, and the path after `:` is where it will be mounted in the container.
 
 ---
 
